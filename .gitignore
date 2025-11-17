@@ -16,3 +16,23 @@ yarn-error.log
 /.idea
 /.vscode
 
+# Exclude uploaded and saved images
+/storage/app/public/images/originals/*
+!/storage/app/public/images/originals/.gitkeep
+/storage/app/public/images/working/*
+!/storage/app/public/images/working/.gitkeep
+/storage/app/public/images/history/*
+!/storage/app/public/images/history/.gitkeep
+/storage/app/public/images/final/*
+!/storage/app/public/images/final/.gitkeep
+
+# Exclude all image files in storage (catch-all)
+/storage/app/public/images/**/*.jpg
+/storage/app/public/images/**/*.jpeg
+/storage/app/public/images/**/*.png
+/storage/app/public/images/**/*.gif
+/storage/app/public/images/**/*.webp
+/storage/app/public/images/**/*.bmp
+/storage/app/public/images/**/*.svg
+/storage/app/public/images/**/*.ico
+
