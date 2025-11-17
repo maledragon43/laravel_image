@@ -15,7 +15,27 @@ class ImageController extends Controller
      */
     public function index()
     {
-        return view('images.index');
+        // Retrieve all uploaded images from session
+        $uploadedImages = [];
+        $allSessionData = Session::all();
+        
+        foreach ($allSessionData as $key => $value) {
+            if (strpos($key, 'image_') === 0 && is_array($value)) {
+                $imageId = str_replace('image_', '', $key);
+                $imageData = $value;
+                
+                // Check if image file still exists
+                if (isset($imageData['working_path']) && Storage::disk('public')->exists($imageData['working_path'])) {
+                    $uploadedImages[] = [
+                        'id' => $imageId,
+                        'filename' => $imageData['filename'] ?? 'unknown',
+                        'url' => Storage::disk('public')->url($imageData['working_path']),
+                    ];
+                }
+            }
+        }
+        
+        return view('images.index', ['uploadedImages' => $uploadedImages]);
     }
 
     /**
@@ -243,6 +263,128 @@ class ImageController extends Controller
             'success' => true,
             'message' => 'Image saved successfully',
             'url' => Storage::disk('public')->url($finalPath),
+        ]);
+    }
+
+    /**
+     * Delete an uploaded image
+     * 
+     * Removes the image files and session data.
+     */
+    public function destroy($id)
+    {
+        $imageData = Session::get("image_{$id}");
+        
+        if (!$imageData) {
+            return response()->json(['success' => false, 'message' => 'Image not found'], 404);
+        }
+
+        // Delete all image files
+        if (isset($imageData['original_path']) && Storage::disk('public')->exists($imageData['original_path'])) {
+            Storage::disk('public')->delete($imageData['original_path']);
+        }
+        
+        if (isset($imageData['working_path']) && Storage::disk('public')->exists($imageData['working_path'])) {
+            Storage::disk('public')->delete($imageData['working_path']);
+        }
+        
+        // Delete history files
+        if (isset($imageData['history']) && is_array($imageData['history'])) {
+            foreach ($imageData['history'] as $historyPath) {
+                if (Storage::disk('public')->exists($historyPath)) {
+                    Storage::disk('public')->delete($historyPath);
+                }
+            }
+        }
+        
+        // Delete final image if it exists
+        $finalPath = 'images/final/' . ($imageData['filename'] ?? '');
+        if (Storage::disk('public')->exists($finalPath)) {
+            Storage::disk('public')->delete($finalPath);
+        }
+        
+        // Remove from session
+        Session::forget("image_{$id}");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Image deleted successfully',
+        ]);
+    }
+
+    /**
+     * Verify stored images on the server
+     * 
+     * Lists all images in storage directories with their metadata.
+     */
+    public function verify()
+    {
+        $storageInfo = [
+            'working' => [],
+            'originals' => [],
+            'history' => [],
+            'final' => [],
+        ];
+
+        // Check working images
+        $workingFiles = Storage::disk('public')->files('images/working');
+        foreach ($workingFiles as $file) {
+            $storageInfo['working'][] = [
+                'path' => $file,
+                'url' => Storage::disk('public')->url($file),
+                'size' => Storage::disk('public')->size($file),
+                'last_modified' => Storage::disk('public')->lastModified($file),
+                'last_modified_formatted' => date('Y-m-d H:i:s', Storage::disk('public')->lastModified($file)),
+            ];
+        }
+
+        // Check original images
+        $originalFiles = Storage::disk('public')->files('images/originals');
+        foreach ($originalFiles as $file) {
+            $storageInfo['originals'][] = [
+                'path' => $file,
+                'url' => Storage::disk('public')->url($file),
+                'size' => Storage::disk('public')->size($file),
+                'last_modified' => Storage::disk('public')->lastModified($file),
+                'last_modified_formatted' => date('Y-m-d H:i:s', Storage::disk('public')->lastModified($file)),
+            ];
+        }
+
+        // Check history images
+        $historyFiles = Storage::disk('public')->files('images/history');
+        foreach ($historyFiles as $file) {
+            $storageInfo['history'][] = [
+                'path' => $file,
+                'url' => Storage::disk('public')->url($file),
+                'size' => Storage::disk('public')->size($file),
+                'last_modified' => Storage::disk('public')->lastModified($file),
+                'last_modified_formatted' => date('Y-m-d H:i:s', Storage::disk('public')->lastModified($file)),
+            ];
+        }
+
+        // Check final images
+        $finalFiles = Storage::disk('public')->files('images/final');
+        foreach ($finalFiles as $file) {
+            $storageInfo['final'][] = [
+                'path' => $file,
+                'url' => Storage::disk('public')->url($file),
+                'size' => Storage::disk('public')->size($file),
+                'last_modified' => Storage::disk('public')->lastModified($file),
+                'last_modified_formatted' => date('Y-m-d H:i:s', Storage::disk('public')->lastModified($file)),
+            ];
+        }
+
+        // Count totals
+        $totals = [
+            'working' => count($storageInfo['working']),
+            'originals' => count($storageInfo['originals']),
+            'history' => count($storageInfo['history']),
+            'final' => count($storageInfo['final']),
+        ];
+
+        return view('images.verify', [
+            'storageInfo' => $storageInfo,
+            'totals' => $totals,
         ]);
     }
 }

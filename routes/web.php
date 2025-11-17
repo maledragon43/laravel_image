@@ -33,3 +33,9 @@ Route::post('/images/{id}/undo', [ImageController::class, 'undo'])->name('images
 // Save final image
 Route::post('/images/{id}/save', [ImageController::class, 'save'])->name('images.save');
 
+// Delete image
+Route::delete('/images/{id}', [ImageController::class, 'destroy'])->name('images.destroy');
+
+// Verify stored images (for debugging)
+Route::get('/images/verify', [ImageController::class, 'verify'])->name('images.verify');
+
