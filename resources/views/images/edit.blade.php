@@ -14,8 +14,8 @@
 </div>
 
 <div id="imageContainer" style="position: relative; display: inline-block; border: 2px solid #ddd; padding: 10px; background: #f9f9f9; border-radius: 4px;">
-    <img id="editableImage" src="{{ $imageUrl }}" alt="Image to edit" style="max-width: 100%; height: auto; display: block;">
-    <div id="cropOverlay" style="display: none; position: absolute; border: 2px dashed #007bff; background: rgba(0,123,255,0.1); pointer-events: none;"></div>
+    <img id="editableImage" src="{{ $imageUrl }}" alt="Image to edit" style="max-width: 100%; height: auto; display: block; position: relative; z-index: 1;">
+    <div id="cropOverlay" style="display: none; position: absolute; border: 2px dashed #007bff; background: rgba(0,123,255,0.1); pointer-events: none; z-index: 2;"></div>
 </div>
 
 <div id="message" style="margin-top: 20px;"></div>
@@ -27,6 +27,11 @@
     }
     .crop-active {
         cursor: crosshair;
+    }
+    .crop-active #editableImage {
+        cursor: crosshair;
+        user-select: none;
+        pointer-events: auto;
     }
 </style>
 @endsection
@@ -75,11 +80,13 @@ document.getElementById('cropBtn').addEventListener('click', function() {
     isCropping = !isCropping;
     if (isCropping) {
         imageContainer.classList.add('crop-active');
-        cropOverlay.style.display = 'block';
+        // Don't show overlay until user starts dragging
+        cropOverlay.style.display = 'none';
         this.textContent = 'Cancel Crop';
         this.classList.remove('btn-success');
         this.classList.add('btn-danger');
     } else {
+        isDragging = false; // Reset dragging state
         imageContainer.classList.remove('crop-active');
         cropOverlay.style.display = 'none';
         this.textContent = 'Enable Crop';
@@ -92,53 +99,90 @@ document.getElementById('cropBtn').addEventListener('click', function() {
 // Mouse events for cropping
 let isDragging = false;
 
-imageContainer.addEventListener('mousedown', function(e) {
+// Attach events to the image itself, not the container
+image.addEventListener('mousedown', function(e) {
     if (!isCropping) return;
     
-    isDragging = true;
-    const rect = imageContainer.getBoundingClientRect();
-    cropStartX = e.clientX - rect.left;
-    cropStartY = e.clientY - rect.top;
+    e.preventDefault();
+    e.stopPropagation();
     
-    cropOverlay.style.left = cropStartX + 'px';
-    cropOverlay.style.top = cropStartY + 'px';
+    isDragging = true;
+    const imageRect = image.getBoundingClientRect();
+    
+    // Calculate coordinates relative to the image
+    cropStartX = e.clientX - imageRect.left;
+    cropStartY = e.clientY - imageRect.top;
+    
+    // Position overlay relative to image container (accounting for image position)
+    const containerRect = imageContainer.getBoundingClientRect();
+    cropOverlay.style.left = (imageRect.left - containerRect.left + cropStartX) + 'px';
+    cropOverlay.style.top = (imageRect.top - containerRect.top + cropStartY) + 'px';
     cropOverlay.style.width = '0px';
     cropOverlay.style.height = '0px';
+    cropOverlay.style.display = 'block';
 });
 
-imageContainer.addEventListener('mousemove', function(e) {
+// Use document for mousemove and mouseup to handle dragging outside image
+document.addEventListener('mousemove', function(e) {
     if (!isCropping || !isDragging) return;
     
-    const rect = imageContainer.getBoundingClientRect();
-    const currentX = e.clientX - rect.left;
-    const currentY = e.clientY - rect.top;
+    const imageRect = image.getBoundingClientRect();
+    const containerRect = imageContainer.getBoundingClientRect();
+    
+    // Calculate current position relative to the image (clamp to image bounds)
+    const currentX = Math.max(0, Math.min(e.clientX - imageRect.left, imageRect.width));
+    const currentY = Math.max(0, Math.min(e.clientY - imageRect.top, imageRect.height));
     
     const width = Math.abs(currentX - cropStartX);
     const height = Math.abs(currentY - cropStartY);
     
-    cropOverlay.style.left = Math.min(cropStartX, currentX) + 'px';
-    cropOverlay.style.top = Math.min(cropStartY, currentY) + 'px';
+    // Position overlay relative to container, but coordinates are relative to image
+    const overlayX = Math.min(cropStartX, currentX);
+    const overlayY = Math.min(cropStartY, currentY);
+    
+    cropOverlay.style.left = (imageRect.left - containerRect.left + overlayX) + 'px';
+    cropOverlay.style.top = (imageRect.top - containerRect.top + overlayY) + 'px';
     cropOverlay.style.width = width + 'px';
     cropOverlay.style.height = height + 'px';
 });
 
-imageContainer.addEventListener('mouseup', async function(e) {
+document.addEventListener('mouseup', async function(e) {
     if (!isCropping || !isDragging) return;
     
     isDragging = false;
     
-    const rect = imageContainer.getBoundingClientRect();
     const imageRect = image.getBoundingClientRect();
     
-    // Calculate crop coordinates relative to the actual image
+    // Calculate crop coordinates relative to the actual image dimensions
     const scaleX = image.naturalWidth / imageRect.width;
     const scaleY = image.naturalHeight / imageRect.height;
     
-    const overlayRect = cropOverlay.getBoundingClientRect();
-    const relativeX = (overlayRect.left - imageRect.left) * scaleX;
-    const relativeY = (overlayRect.top - imageRect.top) * scaleY;
-    const relativeWidth = overlayRect.width * scaleX;
-    const relativeHeight = overlayRect.height * scaleY;
+    // Use the same calculation as mousemove - clamp to image bounds
+    const currentX = Math.max(0, Math.min(e.clientX - imageRect.left, imageRect.width));
+    const currentY = Math.max(0, Math.min(e.clientY - imageRect.top, imageRect.height));
+    
+    const cropX = Math.min(cropStartX, currentX);
+    const cropY = Math.min(cropStartY, currentY);
+    const cropWidth = Math.abs(currentX - cropStartX);
+    const cropHeight = Math.abs(currentY - cropStartY);
+    
+    // Skip if crop area is too small
+    if (cropWidth < 5 || cropHeight < 5) {
+        resetCropOverlay();
+        return;
+    }
+    
+    // Convert to actual image coordinates
+    const relativeX = cropX * scaleX;
+    const relativeY = cropY * scaleY;
+    const relativeWidth = cropWidth * scaleX;
+    const relativeHeight = cropHeight * scaleY;
+    
+    // Ensure coordinates are within image bounds
+    const finalX = Math.max(0, Math.min(relativeX, image.naturalWidth - 1));
+    const finalY = Math.max(0, Math.min(relativeY, image.naturalHeight - 1));
+    const finalWidth = Math.max(1, Math.min(relativeWidth, image.naturalWidth - finalX));
+    const finalHeight = Math.max(1, Math.min(relativeHeight, image.naturalHeight - finalY));
     
     // Apply crop
     try {
@@ -150,10 +194,10 @@ imageContainer.addEventListener('mouseup', async function(e) {
                                '{{ csrf_token() }}'
             },
             body: JSON.stringify({
-                x: Math.max(0, relativeX),
-                y: Math.max(0, relativeY),
-                width: Math.min(relativeWidth, image.naturalWidth - Math.max(0, relativeX)),
-                height: Math.min(relativeHeight, image.naturalHeight - Math.max(0, relativeY))
+                x: Math.round(finalX),
+                y: Math.round(finalY),
+                width: Math.round(finalWidth),
+                height: Math.round(finalHeight)
             })
         });
         

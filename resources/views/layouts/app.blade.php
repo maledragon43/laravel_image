@@ -16,14 +16,6 @@
             background: #f5f5f5;
             padding: 20px;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
         h1 {
             margin-bottom: 20px;
             color: #333;
@@ -88,15 +80,13 @@
     @yield('styles')
 </head>
 <body>
-    <div class="container">
-        @if(session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
-        @endif
-        @if(session('error'))
-            <div class="alert alert-error">{{ session('error') }}</div>
-        @endif
-        @yield('content')
-    </div>
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-error">{{ session('error') }}</div>
+    @endif
+    @yield('content')
     @yield('scripts')
 </body>
 </html>

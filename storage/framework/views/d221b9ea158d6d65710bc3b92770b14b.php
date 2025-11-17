@@ -16,14 +16,6 @@
             background: #f5f5f5;
             padding: 20px;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
         h1 {
             margin-bottom: 20px;
             color: #333;
@@ -88,15 +80,13 @@
     <?php echo $__env->yieldContent('styles'); ?>
 </head>
 <body>
-    <div class="container">
-        <?php if(session('success')): ?>
-            <div class="alert alert-success"><?php echo e(session('success')); ?></div>
-        <?php endif; ?>
-        <?php if(session('error')): ?>
-            <div class="alert alert-error"><?php echo e(session('error')); ?></div>
-        <?php endif; ?>
-        <?php echo $__env->yieldContent('content'); ?>
-    </div>
+    <?php if(session('success')): ?>
+        <div class="alert alert-success"><?php echo e(session('success')); ?></div>
+    <?php endif; ?>
+    <?php if(session('error')): ?>
+        <div class="alert alert-error"><?php echo e(session('error')); ?></div>
+    <?php endif; ?>
+    <?php echo $__env->yieldContent('content'); ?>
     <?php echo $__env->yieldContent('scripts'); ?>
 </body>
 </html>
