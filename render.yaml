@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: laravel-image-editor
+    env: php
+    plan: free
+    buildCommand: composer install --no-dev --optimize-autoloader && php artisan config:cache && php artisan route:cache && php artisan view:cache
+    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: error
+      - key: SESSION_DRIVER
+        value: database
+      - key: FILESYSTEM_DISK
+        value: public
+
+databases:
+  - name: laravel-image-editor-db
+    plan: free
+    databaseName: laravel
+    user: laravel
+

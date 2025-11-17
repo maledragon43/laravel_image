@@ -9,6 +9,7 @@
     <button id="rotateBtn" class="btn btn-primary">Rotate 90°</button>
     <button id="cropBtn" class="btn btn-success">Enable Crop</button>
     <button id="undoBtn" class="btn btn-secondary" disabled>Undo</button>
+    <button id="saveBtn" class="btn btn-success">Save Image</button>
     <a href="/" class="btn btn-secondary">Back to Upload</a>
 </div>
 
@@ -252,6 +253,49 @@ document.getElementById('undoBtn').addEventListener('click', async function() {
     } catch (error) {
         console.error('Error:', error);
         showMessage('Undo failed. Please try again.', 'error');
+    }
+});
+
+// Save button
+document.getElementById('saveBtn').addEventListener('click', async function() {
+    if (!confirm('Save this edited image? It will be saved to the final directory.')) {
+        return;
+    }
+    
+    const saveBtn = this;
+    const originalText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    
+    try {
+        const response = await fetch(`/images/${imageId}/save`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || 
+                               '<?php echo e(csrf_token()); ?>'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage('Image saved successfully! Saved to: ' + data.url, 'success');
+            // Optionally redirect to upload page after a delay
+            setTimeout(() => {
+                if (confirm('Image saved! Would you like to go back to the upload page?')) {
+                    window.location.href = '/';
+                }
+            }, 2000);
+        } else {
+            showMessage('Save failed: ' + (data.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showMessage('Save failed. Please try again.', 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
     }
 });
 

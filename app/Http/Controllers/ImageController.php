@@ -256,8 +256,8 @@ class ImageController extends Controller
         $workingContent = Storage::disk('public')->get($imageData['working_path']);
         Storage::disk('public')->put($finalPath, $workingContent);
         
-        // Clean up session
-        Session::forget("image_{$id}");
+        // Keep image in session so it remains visible on upload page
+        // User can still delete it later if needed
         
         return response()->json([
             'success' => true,
