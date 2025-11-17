@@ -92,6 +92,12 @@ return [
 
     'providers' => ServiceProvider::defaultProviders()->merge([
         /*
+         * Application Service Providers...
+         */
+        App\Providers\AppServiceProvider::class,
+        App\Providers\RouteServiceProvider::class,
+        
+        /*
          * Package Service Providers...
          */
         Intervention\Image\ImageServiceProvider::class,
